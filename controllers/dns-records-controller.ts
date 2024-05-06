@@ -30,41 +30,73 @@ export const listDnsRecords = async (req: any, res: any) => {
 export const createDnsRecords = async (req: any, res: any) => {
   try {
     const { dns_data, code } = req.body;
-    const { domain_name, record_type, record_value } = dns_data;
-    const params = {
-      ChangeBatch: {
-        Changes: [
-          {
-            Action: "CREATE",
-            ResourceRecordSet: {
-              Name: domain_name,
-              Type: record_type,
-              TTL: 300,
-              ResourceRecords: [{ Value: record_value }],
-            },
-          },
-        ],
+    const { domainName, recordType, recordValue } = dns_data;
+    console.log(dns_data, code);
+    // const params = {
+    //   ChangeBatch: {
+    //     Changes: [
+    //       {
+    //         Action: "CREATE",
+    //         ResourceRecordSet: {
+    //           Name: domaiName,
+    //           Type: recordType,
+    //           TTL: 300,
+    //           ResourceRecords: [{ Value: recordValue }],
+    //           AliasTarget: {
+    //             HostedZoneId: code, 
+    //             DNSName: domaiName, 
+    //             EvaluateTargetHealth: false
+    //           },
+    //           CidrRoutingConfig: { 
+    //             CollectionId: "25",
+    //             LocationName: "India", 
+    //           },
+    //         },
+    //       },
+    //     ],
+    //   },
+    //   HostedZoneId: code,
+    // };
+    const input = {
+      "ChangeBatch": {
+          "Changes": [
+              {
+                  "Action": "CREATE",
+                  "ResourceRecordSet": {
+                      "Name": domainName,
+                      "SetIdentifier": "Primary",
+                      "Region": "ap-south-1",
+                      "Type": recordType,
+                      "TTL": 60,
+                      "ResourceRecords": [
+                          {
+                              "Value": recordValue
+                          }
+                      ]
+                  }
+              }
+          ],
+          "Comment": `Web server for the domain ${domainName}`
       },
-      HostedZoneId: code,
-    };
+      "HostedZoneId": code
+  };
+  
+    console.log(input, input.ChangeBatch.Changes[0])
     // @ts-ignore
-    const data = new ChangeResourceRecordSetsCommand(params);
+    const data = new ChangeResourceRecordSetsCommand(input);
     const response = await client.send(data);
-    return res
-      .status(200)
-      .json({ message: "DNS record created successfully" }, response);
+    return res.status(200).json({ message: "DNS record created successfully", response });
   } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ message: "Failed to create DNS record", error: error });
+    console.log(error);
+    return res.status(500).json({ message: "Failed to create DNS record", error: error });
   }
 };
 
 export const updateDnsRecords = async (req: any, res: any) => {
   try {
-    const { dns_record_data, code } = req.body;
-    if (dns_record_data.recordType !== "SOA") {
+    console.log(req.body)
+    const { dns_data, code } = req.body;
+    if (dns_data.recordType !== "SOA") {
       const params = {
         HostedZoneId: code,
         ChangeBatch: {
@@ -72,12 +104,12 @@ export const updateDnsRecords = async (req: any, res: any) => {
             {
               Action: "UPSERT",
               ResourceRecordSet: {
-                Name: dns_record_data.Name,
-                Type: dns_record_data.Type,
-                TTL: dns_record_data.ttl,
+                Name: dns_data.domainName,
+                Type: dns_data.recordType,
+                TTL: dns_data.TTL,
                 ResourceRecords: [
                   {
-                    Value: dns_record_data.Value,
+                    Value: dns_data.recordValue,
                   },
                 ],
               },
@@ -90,7 +122,7 @@ export const updateDnsRecords = async (req: any, res: any) => {
       const response = await client.send(command);
       return res
         .status(200)
-        .json({ message: "Dns record created successfully" }, response);
+        .json({ message: "Dns record created successfully" , response});
     } else {
       return res.status(400).json({ message: "Cannot update Dns record" });
     }
